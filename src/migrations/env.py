@@ -7,7 +7,7 @@ from alembic import context
 
 from config.settings import settings
 from database.db import Base
-from database.models import Product
+from database.models import Product  # noqa: F401
 
 
 config = context.config

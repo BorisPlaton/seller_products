@@ -7,10 +7,11 @@ from starlette.requests import Request
 
 from config.settings import settings
 from database.db import Base
+from products.views import router as products_router, products_tag
 
 
 DESCRIPTION = """
-The service for receiving products from sellers in the excel format. It
+The service for receiving products from sellers in the *Excel* format. It
 is a solution for the test [task](https://github.com/avito-tech/mx-backend-trainee-assignment).
 """
 
@@ -20,15 +21,16 @@ def create_app():
     The factory function. Returns a FastAPI application instance.
     """
     app = FastAPI(
-        title="Text Searcher",
+        title="Seller products",
         description=DESCRIPTION,
         openapi_tags=[
             {
-                "name": "Text documents",
-                "description": "You can receive or delete them.",
-            },
+                'name': products_tag,
+                'description': "Represents the *CRUD* operations for the sellers products."
+            }
         ]
     )
+    app.include_router(products_router)
 
     @app.middleware("http")
     def set_db_session(request: Request, call_next: Callable):
