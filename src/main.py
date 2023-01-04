@@ -2,11 +2,10 @@ from typing import Callable
 
 import uvicorn
 from fastapi import FastAPI
-from sqlalchemy.orm import Session
 from starlette.requests import Request
 
 from config.settings import settings
-from database.db import Base
+from database.db import Base, SessionLocal
 from products.views import router as products_router, products_tag
 
 
@@ -37,7 +36,7 @@ def create_app():
         """
         Sets the instance of Session class to the incoming request.
         """
-        with Session() as session:
+        with SessionLocal() as session:
             request.state.session = session
             return call_next(request)
 

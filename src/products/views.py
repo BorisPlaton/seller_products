@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from database.services.selectors import get_filtered_products
 from products.dependencies import get_db_session
 from products.schemas import SellerProductsExcel, UpdatedProductsInfo, SellerProduct
 
@@ -33,3 +34,5 @@ def get_products(
     """
     Returns products from the database by the provided query parameters.
     """
+    return get_filtered_products(session, seller_id=seller_id, offer_id=offer_id)
+

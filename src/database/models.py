@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, CheckConstraint, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, String, Boolean, CheckConstraint, ForeignKey, Numeric, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import expression
 
@@ -12,15 +12,18 @@ class Product(Base):
     __tablename__ = 'product'
     __table_args__ = (
         CheckConstraint("price > 0", name='product_price_is_natural_check'),
+        CheckConstraint("offer_id > 0", name='offer_id_is_natural_check'),
         CheckConstraint("quantity >= 0", name='product_quantity_is_positive_check'),
+        UniqueConstraint('offer_id', 'seller_id')
     )
 
-    offer_id = Column(Integer, primary_key=True)
-    name = Column(String(32))
-    price = Column(Numeric)
-    quantity = Column(Integer)
-    available = Column(Boolean, server_default=expression.true())
-    seller_id = Column(ForeignKey('seller.seller_id', ondelete='cascade'))
+    product_id = Column(Integer, primary_key=True)
+    offer_id = Column(Integer, nullable=False)
+    name = Column(String(32), nullable=False)
+    price = Column(Numeric, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    available = Column(Boolean, server_default=expression.true(), nullable=False)
+    seller_id = Column(ForeignKey('seller.seller_id', ondelete='CASCADE'), nullable=False)
 
     seller = relationship('Seller', back_populates='products')
 
