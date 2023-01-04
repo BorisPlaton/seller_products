@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from starlette.requests import Request
 
 from config.settings import settings
-from database.db import Base, SessionLocal
+from database.db import SessionLocal
 from products.views import router as products_router, products_tag
 
 
@@ -34,18 +34,14 @@ def create_app():
     @app.middleware("http")
     def set_db_session(request: Request, call_next: Callable):
         """
-        Sets the instance of Session class to the incoming request.
+        Sets the instance of Session class to the incoming request. Commits
+        all changes at the end of request and returns view's response.
         """
         with SessionLocal() as session:
             request.state.session = session
-            return call_next(request)
-
-    @app.on_event('startup')
-    def initialization():
-        """
-        Creates all necessary tables.
-        """
-        Base.metadata.create_all()
+            res = call_next(request)
+            session.commit()
+            return res
 
     return app
 

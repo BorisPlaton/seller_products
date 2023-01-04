@@ -27,6 +27,9 @@ class Product(Base):
 
     seller = relationship('Seller', back_populates='products')
 
+    def __repr__(self):
+        return f"<Product: id-{self.product_id}, name-{self.name}>"
+
 
 class Seller(Base):
     """
@@ -37,3 +40,6 @@ class Seller(Base):
     seller_id = Column(Integer, primary_key=True)
 
     products = relationship(Product, back_populates='seller')
+
+    def __repr__(self):
+        return f"<Seller: id-{self.seller_id}>"

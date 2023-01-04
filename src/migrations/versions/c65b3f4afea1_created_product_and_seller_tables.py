@@ -1,7 +1,7 @@
 """Created Product and Seller tables
 
 Revision ID: c65b3f4afea1
-Revises: 
+Revises:
 Create Date: 2023-01-04 17:37:37.010555
 
 """
