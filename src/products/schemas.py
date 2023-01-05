@@ -1,10 +1,9 @@
 from pydantic import BaseModel, AnyUrl, validator, Field
 
 
-class SellerProductsExcel(BaseModel):
+class SellerExcelFile(BaseModel):
     """
-    Represents a link to the *.xlsx file with seller id in
-    the database.
+    Represents a link to the *.xlsx file with seller ID.
     """
     seller_id: int
     file_link: AnyUrl
@@ -18,7 +17,7 @@ class SellerProductsExcel(BaseModel):
         }
 
 
-class SellerProduct(BaseModel):
+class ExcelProductRecord(BaseModel):
     """
     The product that is represented in the Excel file.
     """
@@ -35,6 +34,7 @@ class SellerProduct(BaseModel):
                 'offer_id': 1,
                 'name': "Book",
                 'price': 450.5,
+                'quantity': 13,
                 'available': True
             }
         }
@@ -46,7 +46,7 @@ class SellerProduct(BaseModel):
 
 class UpdatedProductsInfo(BaseModel):
     """
-    Provides information about updating products.
+    Provides information about product updates.
     """
     created: int | None = None
     updated: int | None = None
@@ -60,5 +60,30 @@ class UpdatedProductsInfo(BaseModel):
                 'updated': 1,
                 'deleted': 3,
                 'errors': 2,
+            }
+        }
+
+
+class SellerProduct(BaseModel):
+    """
+    The product record from the database.
+    """
+    name: str
+    price: float
+    quantity: int
+    product_id: int
+    offer_id: int
+    seller_id: int
+
+    class Config:
+        orm_mode = True
+        schema_extra = {
+            'example': {
+                'name': "Book",
+                'price': 450.5,
+                'quantity': 13,
+                'product_id': 1,
+                'offer_id': 1,
+                'seller_id': 1,
             }
         }

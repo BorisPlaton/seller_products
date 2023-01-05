@@ -20,6 +20,7 @@ pytest = "^7.2.0"
 flake8 = "^6.0.0"
 flake8-pyproject = "^1.2.2"
 mixer = "^7.2.2"
+pytest-cov = "^4.0.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -41,5 +42,22 @@ max-line-length = 120
 [tool.pytest.ini_options]
 addopts = "--strict-markers -p no:cacheprovider"
 testpaths = [
-    "**tests/",
+    "*tests/",
+]
+pythonpath = "."
+
+[tool.coverage.run]
+omit = [
+    "*conftest.py*",
+    "*/__init__.py",
+    "*/migrations/*",
+    "*/tests/",
+]
+
+[tool.coverage.report]
+omit = [
+    "*conftest.py*",
+    "*/__init__.py",
+    "*/migrations/*",
+    "*/tests/*",
 ]

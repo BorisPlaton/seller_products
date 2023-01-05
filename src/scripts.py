@@ -23,12 +23,11 @@ def load_db_data(quantity: int = 100):
         session.add_all(
             [mixer.blend(
                 Product, price=randint(100, 500), quantity=randint(0, 100),
-                offer_id=randint(1, 10), seller=Seller()
+                offer_id=randint(1, 10), seller=Seller(), name=mixer.RANDOM,
+                available=mixer.RANDOM(True, True, False)
             ) for _ in range(quantity)]
         )
-        for product in session.query(Product).all():
-            print(product)
-            print(product.seller)
+        print(f"Added {quantity} product and seller records.")
 
 
 @app.command()

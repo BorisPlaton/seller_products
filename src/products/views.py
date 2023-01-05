@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from products.dependencies import get_db_session
-from products.schemas import SellerProductsExcel, UpdatedProductsInfo, SellerProduct
+from products.dependencies import get_db_session, get_products_criteria
+from products.schemas import SellerExcelFile, UpdatedProductsInfo, SellerProduct
+from products.services.selectors import get_all_products
 
 
 products_tag = "Products"
@@ -14,7 +15,7 @@ router = APIRouter(
 
 @router.post('/', response_model=UpdatedProductsInfo)
 def update_seller_products(
-        seller_products: SellerProductsExcel, session: Session = Depends(get_db_session)
+        seller_products: SellerExcelFile, session: Session = Depends(get_db_session)
 ):
     """
     Updates products in the database. This method can **create**, **delete**
@@ -27,9 +28,10 @@ def update_seller_products(
 
 @router.get('/', response_model=list[SellerProduct])
 def get_products(
-        seller_id: int | None = None, offer_id: int | None = None,
-        name_substring: str | None = None, session: Session = Depends(get_db_session)
+        criteria: dict = Depends(get_products_criteria), session: Session = Depends(get_db_session)
 ):
     """
-    Returns products from the database by the provided query parameters.
+    Returns products from the database by the provided query parameters. Only
+    those products whose `available` column equals **True** are returned.
     """
+    return get_all_products(session, **criteria)
