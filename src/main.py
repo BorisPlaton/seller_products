@@ -1,7 +1,9 @@
+import sys
 from typing import Callable
 
 import uvicorn
 from fastapi import FastAPI
+from loguru import logger
 from starlette.requests import Request
 
 from config.settings import settings
@@ -30,6 +32,24 @@ def create_app():
         ]
     )
     app.include_router(products_router)
+
+    @app.on_event('startup')
+    def initialize_logger():
+        """
+        Initializes a logger. Defines levels, handlers and a message
+        format.
+        """
+        message_prefix = "[ {time:YYYY:MM:DD HH:mm:ss} | {level} | {name}.{function}:{line} ] "
+        logger.add(
+            settings.ERRORS_LOG_FILE, format=message_prefix + "{exception}", level='ERROR'
+        )
+        logger.add(
+            settings.WARNINGS_LOG_FILE, format=message_prefix + "{message}", level='WARNING'
+        )
+        if settings.DEBUG:
+            logger.add(
+                sys.stdout, format=message_prefix + "{message}", level='DEBUG'
+            )
 
     @app.middleware("http")
     def set_db_session(request: Request, call_next: Callable):

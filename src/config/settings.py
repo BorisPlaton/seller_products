@@ -16,6 +16,9 @@ class ProjectSettings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
 
+    ERRORS_LOG_FILE = BASE_DIR / 'logs' / 'errors.log'
+    WARNINGS_LOG_FILE = BASE_DIR / 'logs' / 'warnings.log'
+
     class Config:
         env_file = map(
             lambda x: Path(__file__).parent.parent.parent / x, ['.env', '.env.dist']

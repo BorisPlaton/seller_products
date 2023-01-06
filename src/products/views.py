@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from database.services.selectors import get_all_products
 from products.dependencies import get_db_session, get_products_criteria
 from products.schemas import SellerExcelFile, UpdatedProductsInfo, SellerProduct
-from products.services.selectors import get_all_products
 
 
 products_tag = "Products"
@@ -14,9 +14,7 @@ router = APIRouter(
 
 
 @router.post('/', response_model=UpdatedProductsInfo)
-def update_seller_products(
-        seller_products: SellerExcelFile, session: Session = Depends(get_db_session)
-):
+def update_seller_products(seller_xlsx: SellerExcelFile):
     """
     Updates products in the database. This method can **create**, **delete**
     or **update** already existing products. Parses file from the
