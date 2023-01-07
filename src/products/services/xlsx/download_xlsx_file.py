@@ -2,8 +2,6 @@ import requests
 from fastapi import HTTPException
 from loguru import logger
 
-from products.services.normalizer_xlsx_link import NormalizeXLSXLink
-
 
 class DownloadXLSXFile:
     """
@@ -24,18 +22,12 @@ class DownloadXLSXFile:
         a 400 exception.
         """
         try:
-            return self._download_file(self._get_download_link())
+            return self._download_file(self.file_link)
         except Exception:
             raise HTTPException(
-                detail="Failed to download an Excel file from %s " % self.file_link,
+                detail="Failed to download an Excel file from %s" % self.file_link,
                 status_code=400
             )
-
-    def _get_download_link(self) -> str:
-        """
-        Returns link to download a *.xlsx file.
-        """
-        return NormalizeXLSXLink(self.file_link).execute()
 
     @staticmethod
     @logger.catch(Exception, level='ERROR', exclude=ValueError)
@@ -49,5 +41,5 @@ class DownloadXLSXFile:
             logger.warning(
                 "Failed to download from %s. Response: %s %s" % (file_link, response.status_code, response.reason)
             )
-            raise ValueError("Status code is %s, but expected to be in range 200-299.")
+            raise ValueError("Status code is %s, but expected to be in range 200-299." % response.status_code)
         return response.content

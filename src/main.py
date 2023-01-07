@@ -40,6 +40,7 @@ def create_app():
         format.
         """
         message_prefix = "[ {time:YYYY:MM:DD HH:mm:ss} | {level} | {name}.{function}:{line} ] "
+        logger.remove(0)
         logger.add(
             settings.ERRORS_LOG_FILE, format=message_prefix + "{exception}", level='ERROR'
         )

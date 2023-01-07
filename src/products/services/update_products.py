@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from database.db import SessionLocal
 from products.schemas import UpdatedProductsInfo, SellerExcelFile, ExcelProductRecord
-from products.services.download_xlsx_file import DownloadXLSXFile
+from products.services.xlsx.download_xlsx_file import DownloadXLSXFile
 
 
 class UpdateSellerProductFromXLSX:
