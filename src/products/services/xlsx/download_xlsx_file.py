@@ -30,7 +30,7 @@ class DownloadXLSXFile:
             )
 
     @staticmethod
-    @logger.catch(Exception, level='ERROR', exclude=ValueError)
+    @logger.catch(Exception, level='ERROR', exclude=ValueError, reraise=True)
     def _download_file(file_link: str):
         """
         Downloads an Excel file and returns its content. If status code

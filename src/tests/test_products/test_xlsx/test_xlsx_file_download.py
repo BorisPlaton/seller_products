@@ -42,11 +42,9 @@ class TestDownloadXLSXFile:
         assert e.value.status_code == 400
 
     @pytest.mark.web
-    @pytest.mark.xfail(reason="Link with Excel file no longer exist.")
-    def test_file_is_actually_downloaded_and_returned_as_bytes(self):
-        response = DownloadXLSXFile(
-            'https://docs.google.com/spreadsheets/d/11hqrBYKDtxTe7-NbPGDYMSVks-SO6f9b/export?format=xlsx&gid=1225459015'
-        ).execute()
+    @pytest.mark.xfail
+    def test_file_is_actually_downloaded_and_returned_as_bytes(self, xlsx_link):
+        response = DownloadXLSXFile(xlsx_link).execute()
         assert isinstance(response, bytes)
         wb = load_workbook(BytesIO(response))
         assert isinstance(wb, Workbook)

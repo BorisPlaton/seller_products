@@ -5,11 +5,14 @@ from typing import Any
 from openpyxl.cell import Cell
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
-from products.schemas import ExcelProductRecord
 from validation.validation_mixin import ValidationMixin
-from validation.validators import validate_worksheet_columns_quantity, validate_worksheet_has_content
+from validation.validators import (
+    validate_worksheet_columns_size,
+    validate_worksheet_has_content,
+    validate_worksheet_starts_from_left_top_corner,
+)
 
 
 @dataclass
@@ -19,7 +22,7 @@ class ParsedRecords:
     It has list of products and errors quantity during
     parsing.
     """
-    products: list[ExcelProductRecord]
+    products: list[BaseModel]
     errors: int
 
 
@@ -29,15 +32,17 @@ class ParseXLSXFile(ValidationMixin):
     first worksheet and starts from the A1 cell.
     """
 
-    def __init__(self, workbook: Workbook):
+    def __init__(self, workbook: Workbook, record_class: type[BaseModel]):
         """
         Stores workbook with product records.
         """
         self.workbook = workbook
+        self.record_class = record_class
         self.columns_map = {i: None for i, _ in enumerate(self.worksheet_headers)}
         self.validators = [
-            validate_worksheet_columns_quantity,
-            validate_worksheet_has_content
+            validate_worksheet_has_content,
+            validate_worksheet_columns_size,
+            validate_worksheet_starts_from_left_top_corner,
         ]
 
     def execute(self) -> ParsedRecords:
@@ -62,7 +67,7 @@ class ParseXLSXFile(ValidationMixin):
         """
         Returns headers that are expected to be in the worksheet first row.
         """
-        return [name for name in ExcelProductRecord.__annotations__]
+        return [name for name in self.record_class.__annotations__]
 
     @property
     def common_validators_kwargs(self):
@@ -75,7 +80,7 @@ class ParseXLSXFile(ValidationMixin):
         """
         Sets values in the columns map dictionary.
         """
-        first_row = next(self.worksheet.iter_rows(0, 1))
+        first_row = next(self.worksheet.iter_rows())
         SetWorksheetHeader(first_row, self.columns_map, headers=self.worksheet_headers).execute()
 
     def _parse_file_records(self) -> ParsedRecords:
@@ -85,12 +90,12 @@ class ParseXLSXFile(ValidationMixin):
         """
         product_records = []
         errors_quantity = 0
-        for row in self.worksheet.iter_rows(1):
+        for row in self.worksheet.iter_rows(2):
             try:
                 product_records.append(
-                    ParseXLSXRowRecords(row, self.columns_map, record_class=ExcelProductRecord).execute()
+                    ParseXLSXRowRecords(row, self.columns_map, record_class=self.record_class).execute()
                 )
-            except ValueError:
+            except ValidationError:
                 errors_quantity += 1
         return ParsedRecords(products=product_records, errors=errors_quantity)
 
@@ -141,11 +146,11 @@ class ParseXLSXRowRecords(BaseParseXLSXRow):
     an error occurs, raises an exception.
     """
 
-    def __init__(self, *args, record_class: type[ExcelProductRecord | BaseModel]):
+    def __init__(self, *args, record_class: type[BaseModel]):
         super().__init__(*args)
         self.record_class = record_class
 
-    def execute(self) -> ExcelProductRecord | BaseModel:
+    def execute(self) -> BaseModel:
         """
         Firstly, validates the row, and then returns parsed record. If
         some validation doesn't pass, raises an exception.

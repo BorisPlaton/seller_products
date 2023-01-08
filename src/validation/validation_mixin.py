@@ -3,6 +3,8 @@ from typing import Callable
 
 from loguru import logger
 
+from validation.exceptions import ValidationException
+
 
 class ValidationMixin:
     """
@@ -16,7 +18,7 @@ class ValidationMixin:
         """
         self.validators = []
 
-    @logger.catch(ValueError)
+    @logger.catch(ValidationException, reraise=True)
     def validate(self):
         """
         Runs all validators that are specified in the validators attribute.
