@@ -1,12 +1,10 @@
-from io import BytesIO
 from unittest.mock import patch, MagicMock
 
 import pytest
-from fastapi import HTTPException
-from openpyxl.reader.excel import load_workbook
 from openpyxl.workbook import Workbook
 
 from products.services.xlsx.download_xlsx_file import DownloadXLSXFile
+from products.services.xlsx.exceptions import DownloadFailure
 
 
 class TestDownloadXLSXFile:
@@ -15,12 +13,12 @@ class TestDownloadXLSXFile:
     @pytest.mark.parametrize(
         'status_code', [300, 500, 400, 199]
     )
-    def test_if_status_code_not_in_range_200_299_raises_value_error(self, get_method: MagicMock, status_code):
+    def test_if_status_code_not_in_range_200_299_raises_exception(self, get_method: MagicMock, status_code):
         mocked_response = MagicMock()
         mocked_response.status_code = status_code
         get_method.return_value = mocked_response
-        with pytest.raises(ValueError):
-            DownloadXLSXFile._download_file('fake_link')
+        with pytest.raises(DownloadFailure):
+            DownloadXLSXFile('fake_link')._download_file()
 
     @patch('requests.get')
     @pytest.mark.parametrize(
@@ -32,19 +30,25 @@ class TestDownloadXLSXFile:
         mocked_response.status_code = status_code
         mocked_response.content = response_content
         get_method.return_value = mocked_response
-        assert DownloadXLSXFile._download_file('fake_link') == response_content
+        assert DownloadXLSXFile('fake_link')._download_file() == response_content
 
     @patch('products.services.xlsx.download_xlsx_file.DownloadXLSXFile._download_file')
-    def test_if_execute_method_failed_raises_http_exception(self, method_mock: MagicMock):
+    def test_if_execute_method_failed_raises_exception(self, method_mock: MagicMock):
         method_mock.side_effect = Exception()
-        with pytest.raises(HTTPException) as e:
+        with pytest.raises(DownloadFailure):
             DownloadXLSXFile('fake link').execute()
-        assert e.value.status_code == 400
 
     @pytest.mark.web
     @pytest.mark.xfail
     def test_file_is_actually_downloaded_and_returned_as_bytes(self, xlsx_link):
         response = DownloadXLSXFile(xlsx_link).execute()
-        assert isinstance(response, bytes)
-        wb = load_workbook(BytesIO(response))
-        assert isinstance(wb, Workbook)
+        assert isinstance(response, Workbook)
+
+    @pytest.mark.parametrize(
+        'fake_link', [
+            'fake link', 'https://some-wrong-link-123456770-.com/'
+        ]
+    )
+    def test_download_from_unknown_link_raises_download_failure_exception(self, fake_link):
+        with pytest.raises(DownloadFailure):
+            DownloadXLSXFile(fake_link).execute()

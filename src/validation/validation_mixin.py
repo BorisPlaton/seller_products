@@ -18,13 +18,17 @@ class ValidationMixin:
         """
         self.validators = []
 
-    @logger.catch(ValidationException, reraise=True)
     def validate(self):
         """
-        Runs all validators that are specified in the validators attribute.
+        Runs all validators that are specified in the validators attribute. Logs
+        an exception if it was risen and reraise it.
         """
         for validator in self.validators:
-            validator(**self._get_validator_kwargs(validator))
+            try:
+                return validator(**self._get_validator_kwargs(validator))
+            except ValidationException as e:
+                logger.warning(str(e))
+                raise e
 
     @property
     def common_validators_kwargs(self) -> dict:

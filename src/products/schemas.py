@@ -12,7 +12,7 @@ class SellerExcelFile(BaseModel):
         schema_extra = {
             'example': {
                 'seller_id': 1,
-                'file_link': 'https://hostname.com/excel_file.example'
+                'file_link': 'https://hostname.com/excel_file.xlsx'
             }
         }
 

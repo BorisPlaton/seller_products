@@ -1,8 +1,6 @@
-from io import BytesIO
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from openpyxl.reader.excel import load_workbook
 from openpyxl.workbook import Workbook
 from pydantic import BaseModel, ValidationError
 
@@ -95,8 +93,7 @@ class TestParseXLSXFile:
     @pytest.mark.xfail
     @pytest.mark.web
     def test_xlsx_file_is_parsed_from_downloaded_file(self, xlsx_link):
-        response = DownloadXLSXFile(xlsx_link).execute()
-        workbook = load_workbook(BytesIO(response))
+        workbook = DownloadXLSXFile(xlsx_link).execute()
         parsed_records_stat = ParseXLSXFile(workbook, ExcelProductRecord).execute()
         assert parsed_records_stat.errors == 1
         assert len(parsed_records_stat.products) == 2

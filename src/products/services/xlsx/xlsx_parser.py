@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any
+from typing import Any, TypeVar
 
 from openpyxl.cell import Cell
 from openpyxl.workbook import Workbook
@@ -15,6 +15,9 @@ from validation.validators import (
 )
 
 
+RecordClass = TypeVar('RecordClass', bound=BaseModel)
+
+
 @dataclass
 class ParsedRecords:
     """
@@ -22,7 +25,7 @@ class ParsedRecords:
     It has list of products and errors quantity during
     parsing.
     """
-    products: list[BaseModel]
+    products: list[RecordClass]
     errors: int
 
 
@@ -32,7 +35,7 @@ class ParseXLSXFile(ValidationMixin):
     first worksheet and starts from the A1 cell.
     """
 
-    def __init__(self, workbook: Workbook, record_class: type[BaseModel]):
+    def __init__(self, workbook: Workbook, record_class: type[RecordClass]):
         """
         Stores workbook with product records.
         """
@@ -92,9 +95,10 @@ class ParseXLSXFile(ValidationMixin):
         errors_quantity = 0
         for row in self.worksheet.iter_rows(2):
             try:
-                product_records.append(
-                    ParseXLSXRowRecords(row, self.columns_map, record_class=self.record_class).execute()
-                )
+                parsed_record = ParseXLSXRowRecords(
+                    row, self.columns_map, record_class=self.record_class
+                ).execute()
+                product_records.append(parsed_record)
             except ValidationError:
                 errors_quantity += 1
         return ParsedRecords(products=product_records, errors=errors_quantity)
@@ -146,11 +150,11 @@ class ParseXLSXRowRecords(BaseParseXLSXRow):
     an error occurs, raises an exception.
     """
 
-    def __init__(self, *args, record_class: type[BaseModel]):
+    def __init__(self, *args, record_class: type[RecordClass]):
         super().__init__(*args)
         self.record_class = record_class
 
-    def execute(self) -> BaseModel:
+    def execute(self) -> RecordClass:
         """
         Firstly, validates the row, and then returns parsed record. If
         some validation doesn't pass, raises an exception.

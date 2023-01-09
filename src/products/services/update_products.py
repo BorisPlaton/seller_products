@@ -1,12 +1,7 @@
-from io import BytesIO
-
-from openpyxl.reader.excel import load_workbook
-from openpyxl.workbook import Workbook
 from sqlalchemy.orm import Session
 
 from database.db import SessionLocal
-from products.schemas import UpdatedProductsInfo, SellerExcelFile, ExcelProductRecord
-from products.services.xlsx.download_xlsx_file import DownloadXLSXFile
+from products.schemas import UpdatedProductsInfo, ExcelProductRecord
 
 
 class UpdateSellerProductFromXLSX:
@@ -16,33 +11,23 @@ class UpdateSellerProductFromXLSX:
     deleted and errors.
     """
 
-    def __init__(self, seller_xlsx: SellerExcelFile, session: Session = None):
+    def __init__(self, seller_id: int, products: list[ExcelProductRecord], session: Session = None):
         """
         Receives data about the seller and URL to the Excel file.
         """
-        self.seller_xlsx = seller_xlsx
+        self.products = products
+        self.seller_id = seller_id
         self.session = session or SessionLocal()
-        self.operation_statistics = UpdatedProductsInfo()
-        self.xlsx_products: list[ExcelProductRecord | None] = []
 
     def execute(self) -> UpdatedProductsInfo:
         """
         Executes commands (create, update or delete) and returns its
         statistics.
         """
-        workbook = self.get_excel_file()
-        with self.session.begin() as session:
-            self.process_product_records(session, workbook)
+        self._process_product_records()
         return self.operation_statistics
 
-    def get_excel_file(self) -> Workbook:
-        """
-        Loads an Excel file and returns it as a Workbook.
-        """
-        excel_file_in_bytes = DownloadXLSXFile(self.seller_xlsx.file_link).execute()
-        return load_workbook(BytesIO(excel_file_in_bytes))
-
-    def process_product_records(self, session: Session, workbook: Workbook):
+    def _process_product_records(self):
         """
         Executes corresponding operations for the products.
         """
