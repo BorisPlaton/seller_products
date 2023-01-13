@@ -41,6 +41,9 @@ class TestParseXLSXRowRecords:
             name: str
             available: bool
 
+            def __hash__(self):
+                return hash((type(self),) + tuple(i for i in self.__dict__))
+
         return Record
 
     @pytest.fixture
@@ -68,15 +71,20 @@ class TestParseXLSXRowRecords:
         class Record(BaseModel):
             header: int
 
+            def __hash__(self):
+                return hash((type(self),) + tuple(i for i in self.__dict__))
+
         cell = MagicMock()
         cell.value = 'some string'
         columns_map = {0: 'header'}
         records_row = [cell]
         with pytest.raises(ValidationError):
-            ParseXLSXRowRecords(records_row, columns_map, record_class=Record).execute()
+            ParseXLSXRowRecords(records_row, columns_map, record_class=Record, row_index=1).execute()
 
     def test_if_credentials_are_valid_returns_given_record_class(self, record_class, records_row, columns_map):
-        record_instance = ParseXLSXRowRecords(records_row, columns_map, record_class=record_class).execute()
+        record_instance = ParseXLSXRowRecords(
+            records_row, columns_map, record_class=record_class, row_index=1
+        ).execute()
         assert isinstance(record_instance, record_class)
         for column_num, column_name in columns_map.items():
             assert getattr(record_instance, column_name) == records_row[column_num].value

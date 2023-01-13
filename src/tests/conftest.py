@@ -2,22 +2,33 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from mixer.backend.sqlalchemy import mixer
+from sqlalchemy.future import Connection
 from sqlalchemy.orm import Session
 
 from config.settings import settings
-from database.db import SessionLocal
+from database.db import SessionFactory, engine_factory
 from database.models import Product
 
 
+@pytest.fixture(scope='session')
+def engine():
+    return engine_factory()
+
+
 @pytest.fixture
-def db_session() -> Session:
-    session = SessionLocal()
-    session.begin()
-    try:
-        yield session
-    finally:
-        session.rollback()
-        session.close()
+def db_session(engine) -> Session:
+    with SessionFactory(bind=engine) as session:
+        session.begin()
+        try:
+            yield session
+        finally:
+            session.rollback()
+
+
+@pytest.fixture
+def conn(engine) -> Connection:
+    with engine.connect() as conn:
+        yield conn
 
 
 @pytest.fixture(scope='session', autouse=True)

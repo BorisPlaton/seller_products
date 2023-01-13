@@ -31,4 +31,7 @@ def worksheet_record_class():
         record_name: str
         record_active: bool
 
+        def __hash__(self):
+            return hash((type(self),) + tuple(i for i in self.__dict__))
+
     return Record

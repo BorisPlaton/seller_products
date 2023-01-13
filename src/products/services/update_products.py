@@ -1,7 +1,25 @@
+from typing import NamedTuple
+
+from fastapi import HTTPException
+from openpyxl.workbook import Workbook
 from sqlalchemy.orm import Session
 
-from database.db import SessionLocal
-from products.schemas import UpdatedProductsInfo, ExcelProductRecord
+from database.services.deletes import delete_products_by_records
+from database.services.inserts import create_product_on_conflict_update
+from database.services.structs import ProductRecord, DeleteProductData
+from products.schemas import UpdatedProductsInfo, ExcelProductRecord, SellerExcelFile
+from products.services.xlsx.download_xlsx_file import DownloadXLSXFile
+from products.services.xlsx.exceptions import DownloadFailure
+from products.services.xlsx.xlsx_parser import ParseXLSXFile
+
+
+class DeleteUpdateProducts(NamedTuple):
+    """
+    Has two group of products: first is for the delete operation, the
+    second is for create/update operation.
+    """
+    delete_products: list[DeleteProductData]
+    update_products: list[ProductRecord]
 
 
 class UpdateSellerProductFromXLSX:
@@ -11,23 +29,79 @@ class UpdateSellerProductFromXLSX:
     deleted and errors.
     """
 
-    def __init__(self, seller_id: int, products: list[ExcelProductRecord], session: Session = None):
+    def __init__(self, session: Session, xlsx_info: SellerExcelFile):
         """
         Receives data about the seller and URL to the Excel file.
         """
-        self.products = products
-        self.seller_id = seller_id
-        self.session = session or SessionLocal()
+        self.session = session
+        self.xlsx_info = xlsx_info
+        self.data_manipulation_statistics = {
+            'updated': 0,
+            'created': 0,
+            'deleted': 0,
+            'errors': 0,
+        }
 
     def execute(self) -> UpdatedProductsInfo:
         """
         Executes commands (create, update or delete) and returns its
         statistics.
         """
-        self._process_product_records()
-        return self.operation_statistics
+        try:
+            xlsx_workbook = self._get_workbook()
+            parsed_products = self._get_workbook_product_records(xlsx_workbook)
+            self._process_product_records(self._get_product_groups(parsed_products))
+            return UpdatedProductsInfo(**self.data_manipulation_statistics)
+        except DownloadFailure as e:
+            raise HTTPException(400, str(e))
 
-    def _process_product_records(self):
+    def _get_workbook(self) -> Workbook:
         """
-        Executes corresponding operations for the products.
+        Downloads and returns a workbook from the file link. If any exception
+        occurred during download process, raises a http exception.
         """
+        return DownloadXLSXFile(self.xlsx_info.file_link).execute()
+
+    def _get_workbook_product_records(self, workbook: Workbook) -> list[ExcelProductRecord]:
+        """
+        Parses products from the Excel file. If file is correct, returns
+        validated product records. Also, updates statistic about errors
+        during records validation.
+        """
+        parsed_records_data = ParseXLSXFile(workbook, ExcelProductRecord).execute()
+        self.data_manipulation_statistics['errors'] = parsed_records_data.errors
+        return parsed_records_data.products
+
+    def _get_product_groups(self, product_records: list[ExcelProductRecord]) -> DeleteUpdateProducts:
+        """
+        Filter products for delete and update/create operations.
+        """
+        products_for_update = []
+        products_for_delete = []
+        seller_id = self.xlsx_info.seller_id
+        for product in product_records:
+            if product.available:
+                products_for_update.append(
+                    ProductRecord(**dict(product), seller_id=seller_id)
+                )
+            else:
+                products_for_delete.append(
+                    DeleteProductData(offer_id=product.offer_id, seller_id=seller_id)
+                )
+        return DeleteUpdateProducts(delete_products=products_for_delete, update_products=products_for_update)
+
+    def _process_product_records(self, performed_products: DeleteUpdateProducts):
+        """
+        Executes corresponding operations for the products. Also, updates statistics
+        about performed operations.
+        """
+        deleted_rows_quantity = delete_products_by_records(
+            self.session, performed_products.delete_products
+        )
+        updated_and_create_products = create_product_on_conflict_update(
+            self.session, performed_products.update_products
+        )
+        self.data_manipulation_statistics.update(
+            deleted=deleted_rows_quantity, updated=updated_and_create_products.updated,
+            created=updated_and_create_products.updated
+        )

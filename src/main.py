@@ -7,7 +7,7 @@ from loguru import logger
 from starlette.requests import Request
 
 from config.settings import settings
-from database.db import SessionLocal
+from database.db import SessionFactory
 from products.views import router as products_router, products_tag
 
 
@@ -27,7 +27,7 @@ def create_app():
         openapi_tags=[
             {
                 'name': products_tag,
-                'description': "Represents the *CRUD* operations for the sellers products."
+                'description': "Provides the *CRUD* operations for the sellers products."
             }
         ]
     )
@@ -42,15 +42,15 @@ def create_app():
         message_prefix = "[ {time:YYYY:MM:DD HH:mm:ss} | {level} | {name}.{function}:{line} ] "
         logger.remove(0)
         logger.add(
-            settings.ERRORS_LOG_FILE, format=message_prefix + "{exception}", level='ERROR'
+            settings.ERRORS_LOG_FILE, format=message_prefix + "{exception}", level='ERROR',
+            filter=lambda x: x['level'].name == 'ERROR'
         )
         logger.add(
-            settings.WARNINGS_LOG_FILE, format=message_prefix + "{message}", level='WARNING'
+            settings.WARNINGS_LOG_FILE, format=message_prefix + "{message}", level='WARNING',
+            filter=lambda x: x['level'].name == 'WARNING'
         )
         if settings.DEBUG:
-            logger.add(
-                sys.stdout, format=message_prefix + "{message}", level='DEBUG'
-            )
+            logger.add(sys.stdout, format=message_prefix + "{message}", level='DEBUG')
 
     @app.middleware("http")
     def set_db_session(request: Request, call_next: Callable):
@@ -58,11 +58,11 @@ def create_app():
         Sets the instance of Session class to the incoming request. Commits
         all changes at the end of request and returns view's response.
         """
-        with SessionLocal() as session:
-            request.state.session = session
-            res = call_next(request)
-            session.commit()
-            return res
+        with SessionFactory() as session:
+            with session.begin():
+                request.state.session = session
+                res = call_next(request)
+                return res
 
     return app
 

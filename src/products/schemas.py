@@ -43,6 +43,13 @@ class ExcelProductRecord(BaseModel):
     def price_is_greater_than_zero(cls, value: float):
         return float("{:.2f}".format(value))
 
+    def __hash__(self):
+        """
+        Hashes only product's offer id because it is unique
+        among all seller's products.
+        """
+        return hash(self.offer_id)
+
 
 class UpdatedProductsInfo(BaseModel):
     """

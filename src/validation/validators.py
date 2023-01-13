@@ -1,3 +1,5 @@
+from typing import Hashable
+
 from openpyxl.worksheet.worksheet import Worksheet
 
 from validation.exceptions import ValidationException
@@ -37,3 +39,19 @@ def validate_worksheet_columns_size(worksheet: Worksheet, expected_columns_quant
             f"Worksheet must have exactly {expected_columns_quantity} columns."
             f" But has {max_columns_quantity}"
         )
+
+
+def validate_rows_dont_have_duplicates():
+    """
+    Validates if all rows are unique. Otherwise, raises an exception.
+    """
+
+    existing_rows = set()
+
+    def inner(record_row: Hashable, row_index: int):
+        if record_row in existing_rows:
+            raise ValidationException(
+                f"Row on {row_index} is a duplicate of some previous record."
+            )
+
+    return inner

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from openpyxl.cell import Cell
 from openpyxl.workbook import Workbook
@@ -11,7 +11,7 @@ from validation.validation_mixin import ValidationMixin
 from validation.validators import (
     validate_worksheet_columns_size,
     validate_worksheet_has_content,
-    validate_worksheet_starts_from_left_top_corner,
+    validate_worksheet_starts_from_left_top_corner, validate_rows_dont_have_duplicates,
 )
 
 
@@ -35,9 +35,10 @@ class ParseXLSXFile(ValidationMixin):
     first worksheet and starts from the A1 cell.
     """
 
-    def __init__(self, workbook: Workbook, record_class: type[RecordClass]):
+    def __init__(self, workbook: Workbook, record_class: type[RecordClass]) -> object:
         """
-        Stores workbook with product records.
+        Stores workbook with product records. The `record_class` argument is used for
+        validating the row in the workbook.
         """
         self.workbook = workbook
         self.record_class = record_class
@@ -72,8 +73,7 @@ class ParseXLSXFile(ValidationMixin):
         """
         return [name for name in self.record_class.__annotations__]
 
-    @property
-    def common_validators_kwargs(self):
+    def get_validators_kwargs(self):
         return {
             'worksheet': self.worksheet,
             'expected_columns_quantity': len(self.columns_map)
@@ -93,10 +93,11 @@ class ParseXLSXFile(ValidationMixin):
         """
         product_records = []
         errors_quantity = 0
-        for row in self.worksheet.iter_rows(2):
+        for row_index, row in enumerate(self.worksheet.iter_rows(2), start=2):
             try:
                 parsed_record = ParseXLSXRowRecords(
-                    row, self.columns_map, record_class=self.record_class
+                    row, self.columns_map, record_class=self.record_class,
+                    row_index=row_index
                 ).execute()
                 product_records.append(parsed_record)
             except ValidationError:
@@ -144,28 +145,38 @@ class SetWorksheetHeader(BaseParseXLSXRow):
             self.columns_map[column_num] = header_name
 
 
-class ParseXLSXRowRecords(BaseParseXLSXRow):
+class ParseXLSXRowRecords(BaseParseXLSXRow, ValidationMixin):
     """
     Parses a single row in the worksheet and returns it. If
     an error occurs, raises an exception.
     """
 
-    def __init__(self, *args, record_class: type[RecordClass]):
+    def __init__(self, *args, record_class: type[RecordClass], row_index: int):
         super().__init__(*args)
         self.record_class = record_class
+        self.row_index = row_index
+        self.validators = [
+            validate_rows_dont_have_duplicates()
+        ]
 
     def execute(self) -> RecordClass:
         """
         Firstly, validates the row, and then returns parsed record. If
         some validation doesn't pass, raises an exception.
         """
-        return self.record_class(**self._get_columns_value())
+        record_row = self._get_record_instance()
+        self.validate(record_row=record_row)
+        return record_row
 
-    def _get_columns_value(self) -> dict[str, Any]:
+    def _get_record_instance(self) -> RecordClass:
         """
         Returns cell values as a dictionary.
         """
-        return {
+        columns_value = {
             self.columns_map[cell_num]: cell.value for cell_num, cell
             in enumerate(self.records_row)
         }
+        return self.record_class(**columns_value)
+
+    def get_validators_kwargs(self) -> dict:
+        return {'row_index': self.row_index}
