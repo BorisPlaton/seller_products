@@ -1,13 +1,10 @@
 import sys
-from typing import Callable
 
 import uvicorn
 from fastapi import FastAPI
 from loguru import logger
-from starlette.requests import Request
 
 from config.settings import settings
-from database.db import SessionFactory
 from products.views import router as products_router, products_tag
 
 
@@ -46,23 +43,11 @@ def create_app():
             filter=lambda x: x['level'].name == 'ERROR'
         )
         logger.add(
-            settings.WARNINGS_LOG_FILE, format=message_prefix + "{message}", level='WARNING',
-            filter=lambda x: x['level'].name == 'WARNING'
+            settings.DEBUG_LOG_FILE, format=message_prefix + "{message}", level='DEBUG',
+            filter=lambda x: x['level'].name == 'DEBUG'
         )
         if settings.DEBUG:
             logger.add(sys.stdout, format=message_prefix + "{message}", level='DEBUG')
-
-    @app.middleware("http")
-    def set_db_session(request: Request, call_next: Callable):
-        """
-        Sets the instance of Session class to the incoming request. Commits
-        all changes at the end of request and returns view's response.
-        """
-        with SessionFactory() as session:
-            with session.begin():
-                request.state.session = session
-                res = call_next(request)
-                return res
 
     return app
 

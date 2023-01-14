@@ -1,9 +1,7 @@
 import inspect
-from typing import Callable
+from typing import Callable, Any
 
-from loguru import logger
-
-from validation.exceptions import ValidationException
+from validation.utils import get_validator_name
 
 
 class ValidationMixin:
@@ -16,22 +14,21 @@ class ValidationMixin:
         The descendant must redefine this list with validators that
         must be executed.
         """
-        self.validators = []
+        self.validators: list[Callable] = []
+        self.validators_returns: dict[str, Any] = {}
 
     def validate(self, **kwargs):
         """
-        Runs all validators that are specified in the validators attribute. Logs
-        an exception if it was risen and reraise it. If kwargs are passed, they update
-        a dictionary from the `get_validators_kwargs` method.
+        Runs all validators that are specified in the validators attribute. If kwargs
+        are passed, they update a dictionary from the `get_validators_kwargs` method.
         """
         general_kwargs = self.get_validators_kwargs()
         general_kwargs.update(kwargs)
         for validator in self.validators:
-            try:
-                return validator(**self._get_kwargs_for_specific_validator(validator, general_kwargs))
-            except ValidationException as e:
-                logger.warning(str(e))
-                raise e
+            validator_name = get_validator_name(validator)
+            self.validators_returns[validator_name] = validator(
+                **self._get_kwargs_for_specific_validator(validator, general_kwargs)
+            )
 
     def get_validators_kwargs(self) -> dict:
         """

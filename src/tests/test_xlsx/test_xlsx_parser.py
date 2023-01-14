@@ -5,9 +5,9 @@ from openpyxl.workbook import Workbook
 from pydantic import BaseModel, ValidationError
 
 from products.schemas import ExcelProductRecord
-from products.services.xlsx.download_xlsx_file import DownloadXLSXFile
-from products.services.xlsx.xlsx_parser import SetWorksheetHeader, ParseXLSXRowRecords, ParseXLSXFile
-from validation.exceptions import ValidationException
+from xlsx.download_xlsx_file import DownloadXLSXFile
+from xlsx.exceptions import XLSXException, InvalidXLSXHeaders
+from xlsx.xlsx_parser import SetWorksheetHeader, ParseXLSXFile, ParseXLSXRowRecords
 
 
 class TestSetWorksheetHeader:
@@ -17,7 +17,7 @@ class TestSetWorksheetHeader:
         first_cell = MagicMock()
         first_cell.value = 'unknown header'
         columns_map = {}
-        with pytest.raises(ValueError):
+        with pytest.raises(InvalidXLSXHeaders):
             SetWorksheetHeader([first_cell], columns_map, headers=headers).execute()
 
     def test_command_set_values_in_the_given_map_dict(self):
@@ -109,5 +109,5 @@ class TestParseXLSXFile:
             assert isinstance(record, ExcelProductRecord)
 
     def test_exception_risen_if_workbook_has_empty_worksheet(self, worksheet_record_class):
-        with pytest.raises(ValidationException):
+        with pytest.raises(XLSXException):
             ParseXLSXFile(Workbook(), worksheet_record_class).execute()

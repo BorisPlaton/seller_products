@@ -1,14 +1,14 @@
-from io import BytesIO
-
 import requests
-from loguru import logger
-from openpyxl.reader.excel import load_workbook
 from openpyxl.workbook import Workbook
+from requests.exceptions import RequestException
 
-from products.services.xlsx.exceptions import DownloadFailure
+from validation.utils import get_validator_name
+from xlsx.exceptions import XLSXDownloadFailure
+from xlsx.validators import validate_content_is_workbook
+from xlsx.xlsx_validation import XLSXValidationMixin
 
 
-class DownloadXLSXFile:
+class DownloadXLSXFile(XLSXValidationMixin):
     """
     Downloads a *.xlsx file and returns it content as
     bytes.
@@ -18,7 +18,11 @@ class DownloadXLSXFile:
         """
         Stores link to the Excel file.
         """
+        super().__init__()
         self.file_link = file_link
+        self.validators = [
+            validate_content_is_workbook
+        ]
 
     def execute(self) -> Workbook:
         """
@@ -26,12 +30,8 @@ class DownloadXLSXFile:
         failure occurred during a downloading process, then raises
         an exception.
         """
-        try:
-            return load_workbook(BytesIO(self._download_file()))
-        except DownloadFailure as e:
-            raise e
-        except Exception:
-            raise DownloadFailure("Failed to download file from '%s'." % self.file_link)
+        self.validate(content=self._download_file())
+        return self.validators_returns[get_validator_name(validate_content_is_workbook)]
 
     def _download_file(self):
         """
@@ -41,10 +41,9 @@ class DownloadXLSXFile:
         try:
             response = requests.get(self.file_link)
             if response.status_code not in range(200, 300):
-                raise DownloadFailure("Failed to download a file from '%s'. Response: %s %s" % (
+                raise XLSXDownloadFailure("Failed to download a file from '%s'. Response: %s %s" % (
                     self.file_link, response.status_code, response.reason
                 ))
             return response.content
-        except Exception as e:
-            logger.warning(str(e))
-            raise e
+        except RequestException as e:
+            raise XLSXDownloadFailure(str(e))

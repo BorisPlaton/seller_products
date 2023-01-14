@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean, CheckConstraint, ForeignKey, Numeric, UniqueConstraint
+from sqlalchemy import Column, Integer, String, CheckConstraint, ForeignKey, Numeric, UniqueConstraint
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import expression
 
 from database.db import Base
 
@@ -22,7 +21,6 @@ class Product(Base):
     name = Column(String(32), nullable=False)
     price = Column(Numeric, nullable=False)
     quantity = Column(Integer, nullable=False)
-    available = Column(Boolean, server_default=expression.true(), nullable=False)
     seller_id = Column(ForeignKey('seller.seller_id', ondelete='CASCADE'), nullable=False)
 
     seller = relationship('Seller', back_populates='products')

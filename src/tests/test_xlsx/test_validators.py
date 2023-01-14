@@ -3,8 +3,10 @@ from unittest.mock import MagicMock
 import pytest
 
 from validation.exceptions import ValidationException
-from validation.validators import validate_worksheet_has_content, validate_worksheet_columns_size, \
+from xlsx.validators import (
+    validate_worksheet_has_content, validate_worksheet_columns_size,
     validate_worksheet_starts_from_left_top_corner
+)
 
 
 class TestValidators:

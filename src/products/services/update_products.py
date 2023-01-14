@@ -4,13 +4,15 @@ from fastapi import HTTPException
 from openpyxl.workbook import Workbook
 from sqlalchemy.orm import Session
 
+from database.models import Product
 from database.services.deletes import delete_products_by_records
-from database.services.inserts import create_product_on_conflict_update
+from database.services.inserts import insert_product_on_conflict_update
+from database.services.selectors import get_filtered_products
 from database.services.structs import ProductRecord, DeleteProductData
 from products.schemas import UpdatedProductsInfo, ExcelProductRecord, SellerExcelFile
-from products.services.xlsx.download_xlsx_file import DownloadXLSXFile
-from products.services.xlsx.exceptions import DownloadFailure
-from products.services.xlsx.xlsx_parser import ParseXLSXFile
+from xlsx.download_xlsx_file import DownloadXLSXFile
+from xlsx.exceptions import XLSXException
+from xlsx.xlsx_parser import ParseXLSXFile
 
 
 class DeleteUpdateProducts(NamedTuple):
@@ -52,7 +54,7 @@ class UpdateSellerProductFromXLSX:
             parsed_products = self._get_workbook_product_records(xlsx_workbook)
             self._process_product_records(self._get_product_groups(parsed_products))
             return UpdatedProductsInfo(**self.data_manipulation_statistics)
-        except DownloadFailure as e:
+        except XLSXException as e:
             raise HTTPException(400, str(e))
 
     def _get_workbook(self) -> Workbook:
@@ -98,10 +100,15 @@ class UpdateSellerProductFromXLSX:
         deleted_rows_quantity = delete_products_by_records(
             self.session, performed_products.delete_products
         )
-        updated_and_create_products = create_product_on_conflict_update(
+        created_rows = insert_product_on_conflict_update(
             self.session, performed_products.update_products
         )
+        updated_rows_quantity = get_filtered_products(
+            self.session,
+            (~Product.offer_id.in_([row['offer_id'] for row in created_rows]) &
+             Product.seller_id == self.xlsx_info.seller_id)
+        ).count()
         self.data_manipulation_statistics.update(
-            deleted=deleted_rows_quantity, updated=updated_and_create_products.updated,
-            created=updated_and_create_products.updated
+            deleted=deleted_rows_quantity, updated=updated_rows_quantity,
+            created=len(created_rows)
         )

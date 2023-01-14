@@ -17,7 +17,7 @@ class ProjectSettings(BaseSettings):
     POSTGRES_DB: str
 
     ERRORS_LOG_FILE = BASE_DIR / 'logs' / 'errors.log'
-    WARNINGS_LOG_FILE = BASE_DIR / 'logs' / 'warnings.log'
+    DEBUG_LOG_FILE = BASE_DIR / 'logs' / 'debug.log'
 
     class Config:
         env_file = map(

@@ -20,7 +20,6 @@ def product(seller):
         'name': "Book",
         'price': 450.5,
         'quantity': 13,
-        'available': True,
         'seller_id': seller.seller_id
     })
 

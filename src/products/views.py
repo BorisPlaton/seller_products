@@ -1,8 +1,9 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from database.services.selectors import get_all_products
-from products.dependencies import get_db_session, get_products_criteria
+from database.services.selectors import get_all_products_by_substring
+from database.dependencies import get_db_session
+from products.dependecies import get_products_criteria
 from products.schemas import SellerExcelFile, UpdatedProductsInfo, SellerProduct
 from products.services.update_products import UpdateSellerProductFromXLSX
 from router.custom_router import CustomAPIRouter
@@ -37,4 +38,4 @@ def get_products(
     Returns products from the database by the provided query parameters. Only
     those products whose `available` column equals **True** are returned.
     """
-    return get_all_products(session, **criteria)
+    return get_all_products_by_substring(session, **criteria)

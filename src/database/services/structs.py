@@ -19,7 +19,6 @@ class ProductRecord(NamedTuple):
     name: str
     price: float
     quantity: int
-    available: bool
 
 
 class DeleteProductData(NamedTuple):

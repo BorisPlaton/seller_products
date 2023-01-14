@@ -24,6 +24,7 @@ flake8 = "^6.0.0"
 flake8-pyproject = "^1.2.2"
 mixer = "^7.2.2"
 pytest-cov = "^4.0.0"
+httpx = "^0.23.3"
 
 [build-system]
 requires = ["poetry-core"]
@@ -37,6 +38,7 @@ exclude = [
     "scripts",
     "*__pycache__*",
     "*.pytest_cache*",
+    "*migrations*",
 ]
 max-complexity = 10
 max-line-length = 120
@@ -50,6 +52,7 @@ testpaths = [
 ]
 markers = [
     "web: marks test which interacts with web.",
+    "e2e: marks end-to-end tests."
 ]
 
 [tool.coverage.run]
@@ -67,3 +70,11 @@ omit = [
     "*/migrations/*",
     "*/tests/*",
 ]
+
+[tool.vulture]
+exclude = [
+    "*/migrations/*",
+    "*/tests/*",
+]
+min_confidence = 80
+sort_by_size = true

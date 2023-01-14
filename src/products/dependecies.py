@@ -1,14 +1,3 @@
-from sqlalchemy.orm import Session
-from starlette.requests import Request
-
-
-def get_db_session(request: Request) -> Session:
-    """
-    Returns a SQLAlchemy Session object.
-    """
-    return request.state.session
-
-
 def get_products_criteria(
         seller_id: int | None = None, offer_id: int | None = None,
         substring: str | None = None

@@ -7,12 +7,13 @@ from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from pydantic import BaseModel, ValidationError
 
-from validation.validation_mixin import ValidationMixin
-from validation.validators import (
-    validate_worksheet_columns_size,
-    validate_worksheet_has_content,
-    validate_worksheet_starts_from_left_top_corner, validate_rows_dont_have_duplicates,
+from xlsx.exceptions import AllRecordsAreInvalid, InvalidXLSXHeaders
+from xlsx.validators import (
+    validate_worksheet_starts_from_left_top_corner,
+    validate_worksheet_columns_size, validate_worksheet_has_content,
+    validate_rows_dont_have_duplicates
 )
+from xlsx.xlsx_validation import XLSXValidationMixin
 
 
 RecordClass = TypeVar('RecordClass', bound=BaseModel)
@@ -29,17 +30,18 @@ class ParsedRecords:
     errors: int
 
 
-class ParseXLSXFile(ValidationMixin):
+class ParseXLSXFile(XLSXValidationMixin):
     """
     Parses an Excel file and returns record rows. Parses only the
     first worksheet and starts from the A1 cell.
     """
 
-    def __init__(self, workbook: Workbook, record_class: type[RecordClass]) -> object:
+    def __init__(self, workbook: Workbook, record_class: type[RecordClass]):
         """
         Stores workbook with product records. The `record_class` argument is used for
         validating the row in the workbook.
         """
+        super().__init__()
         self.workbook = workbook
         self.record_class = record_class
         self.columns_map = {i: None for i, _ in enumerate(self.worksheet_headers)}
@@ -102,10 +104,12 @@ class ParseXLSXFile(ValidationMixin):
                 product_records.append(parsed_record)
             except ValidationError:
                 errors_quantity += 1
+        if not product_records:
+            raise AllRecordsAreInvalid("All rows in the excel file are invalid.")
         return ParsedRecords(products=product_records, errors=errors_quantity)
 
 
-class BaseParseXLSXRow:
+class BaseParseXLSXRow(XLSXValidationMixin):
     """
     Defines a base signature for the another row parses.
     """
@@ -114,6 +118,7 @@ class BaseParseXLSXRow:
         """
         Saves records to be parsed.
         """
+        super().__init__()
         self.records_row = records_row
         self.columns_map = columns_map
 
@@ -141,11 +146,11 @@ class SetWorksheetHeader(BaseParseXLSXRow):
         for column_num, column in enumerate(self.records_row):
             header_name = column.value
             if header_name not in self.headers:
-                raise ValueError("First row has an unknown header %s." % header_name)
+                raise InvalidXLSXHeaders("First row has an unknown header %s." % header_name)
             self.columns_map[column_num] = header_name
 
 
-class ParseXLSXRowRecords(BaseParseXLSXRow, ValidationMixin):
+class ParseXLSXRowRecords(BaseParseXLSXRow):
     """
     Parses a single row in the worksheet and returns it. If
     an error occurs, raises an exception.
@@ -164,13 +169,14 @@ class ParseXLSXRowRecords(BaseParseXLSXRow, ValidationMixin):
         Firstly, validates the row, and then returns parsed record. If
         some validation doesn't pass, raises an exception.
         """
-        record_row = self._get_record_instance()
-        self.validate(record_row=record_row)
-        return record_row
+        record_instance = self._get_record_instance()
+        self.validate(record_row=record_instance)
+        return record_instance
 
     def _get_record_instance(self) -> RecordClass:
         """
-        Returns cell values as a dictionary.
+        Returns validated record class with values from the corresponding
+        columns.
         """
         columns_value = {
             self.columns_map[cell_num]: cell.value for cell_num, cell
