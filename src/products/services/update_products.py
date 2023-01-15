@@ -50,19 +50,12 @@ class UpdateSellerProductFromXLSX:
         statistics.
         """
         try:
-            xlsx_workbook = self._get_workbook()
+            xlsx_workbook = DownloadXLSXFile(self.xlsx_info.file_link).execute()
             parsed_products = self._get_workbook_product_records(xlsx_workbook)
             self._process_product_records(self._get_product_groups(parsed_products))
             return UpdatedProductsInfo(**self.data_manipulation_statistics)
         except XLSXException as e:
             raise HTTPException(400, str(e))
-
-    def _get_workbook(self) -> Workbook:
-        """
-        Downloads and returns a workbook from the file link. If any exception
-        occurred during download process, raises a http exception.
-        """
-        return DownloadXLSXFile(self.xlsx_info.file_link).execute()
 
     def _get_workbook_product_records(self, workbook: Workbook) -> list[ExcelProductRecord]:
         """
@@ -82,14 +75,11 @@ class UpdateSellerProductFromXLSX:
         products_for_delete = []
         seller_id = self.xlsx_info.seller_id
         for product in product_records:
-            if product.available:
-                products_for_update.append(
-                    ProductRecord(**dict(product), seller_id=seller_id)
-                )
+            product_values = product.dict()
+            if product_values.pop('available'):
+                products_for_update.append(ProductRecord(**product_values, seller_id=seller_id))
             else:
-                products_for_delete.append(
-                    DeleteProductData(offer_id=product.offer_id, seller_id=seller_id)
-                )
+                products_for_delete.append(DeleteProductData(offer_id=product.offer_id, seller_id=seller_id))
         return DeleteUpdateProducts(delete_products=products_for_delete, update_products=products_for_update)
 
     def _process_product_records(self, performed_products: DeleteUpdateProducts):
@@ -105,8 +95,8 @@ class UpdateSellerProductFromXLSX:
         )
         updated_rows_quantity = get_filtered_products(
             self.session,
-            (~Product.offer_id.in_([row['offer_id'] for row in created_rows]) &
-             Product.seller_id == self.xlsx_info.seller_id)
+            ((~Product.offer_id.in_([row['offer_id'] for row in created_rows])) &
+             (Product.seller_id == self.xlsx_info.seller_id))
         ).count()
         self.data_manipulation_statistics.update(
             deleted=deleted_rows_quantity, updated=updated_rows_quantity,

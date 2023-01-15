@@ -1,4 +1,7 @@
 import pytest
+from mixer.backend.sqlalchemy import mixer
+
+from database.models import Seller
 
 
 @pytest.mark.e2e
@@ -32,3 +35,21 @@ class TestUpdateSellerProductView:
             json={'seller_id': 1, 'file_link': file_link}
         )
         assert res.status_code == 422
+
+    @pytest.mark.web
+    def test_if_empty_database_delete_and_update_operations_returns_zero(
+            self, db_session, test_app, xlsx_link, url_for
+    ):
+        seller: Seller = mixer.blend(Seller)
+        db_session.add(seller)
+        db_session.commit()
+        res = test_app.post(
+            url_for('update_seller_products'),
+            json={'seller_id': seller.seller_id, 'file_link': xlsx_link}
+        )
+        assert res.status_code == 200
+        content = res.json()
+        assert not content['deleted']
+        assert content['created'] == 1
+        assert content['errors'] == 1
+        assert not content['updated']
