@@ -1,14 +1,20 @@
-import os
 from pathlib import Path
 
 from pydantic import BaseSettings
 
 
 class ProjectSettings(BaseSettings):
+    """
+    Application settings. Most values are set from the environment
+    variables.
+    """
     BASE_DIR = Path(__file__).parent.parent
-    HOST: str = os.getenv('HOST')
-    PORT: int = os.getenv('PORT')
-    DEBUG: bool = bool(os.getenv('DEBUG'))
+    ERRORS_LOG_FILE = BASE_DIR / 'logs' / 'errors.log'
+    DEBUG_LOG_FILE = BASE_DIR / 'logs' / 'debug.log'
+
+    HOST: str
+    PORT: int
+    DEBUG: bool
 
     POSTGRES_PORT: str
     POSTGRES_HOST: str
@@ -16,13 +22,8 @@ class ProjectSettings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
 
-    ERRORS_LOG_FILE = BASE_DIR / 'logs' / 'errors.log'
-    DEBUG_LOG_FILE = BASE_DIR / 'logs' / 'debug.log'
-
     class Config:
-        env_file = map(
-            lambda x: Path(__file__).parent.parent.parent / x, ['.env', '.env.dist']
-        )
+        env_file = Path(__file__).parent.parent.parent / '.env.dist'
         env_file_encoding = 'utf-8'
         allow_mutation = False
 

@@ -1,0 +1,14 @@
+.env*
+.gitignore
+docker-compose.*
+Dockerfile
+**.coverage
+htmlcov
+.venv
+.github
+.idea
+.git
+**__pycache__
+**logs
+src/scripts
+**tests
